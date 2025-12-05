@@ -1,0 +1,2680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Image Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #888;
+            font-size: 1.1rem;
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            border: 2px dashed #444;
+            margin-bottom: 40px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #00d4ff;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .upload-section.dragover {
+            border-color: #7b2cbf;
+            background: rgba(123, 44, 191, 0.1);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        .upload-text {
+            margin-top: 15px;
+            color: #666;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #00d4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #333;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .image-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .image-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .image-card img {
+            width: 100%;
+            height: 300px;
+            object-fit: contain;
+            background: #0a0a15;
+        }
+
+        .image-card-content {
+            padding: 20px;
+        }
+
+        .image-card h3 {
+            margin-bottom: 10px;
+            color: #00d4ff;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .analysis-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 15px 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            transition: background 0.3s ease;
+        }
+
+        .section-header:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .section-header h2 {
+            color: #7b2cbf;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3rem;
+        }
+
+        .collapse-icon {
+            font-size: 1.5rem;
+            color: #00d4ff;
+            transition: transform 0.3s ease;
+        }
+
+        .section-header.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            padding: 25px;
+            transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+            padding: 0 25px;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        .analysis-section h2 {
+            color: #7b2cbf;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Collapse all button */
+        .collapse-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: flex-end;
+        }
+
+        .collapse-controls button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #444;
+            color: #888;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .collapse-controls button:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .status-good {
+            background: rgba(0, 255, 100, 0.2);
+            color: #00ff64;
+        }
+
+        .status-warning {
+            background: rgba(255, 200, 0, 0.2);
+            color: #ffc800;
+        }
+
+        .status-error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .status-danger {
+            background: rgba(255, 50, 50, 0.2);
+            color: #ff3232;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-label {
+            color: #888;
+        }
+
+        .info-value {
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .reset-btn {
+            background: transparent;
+            border: 2px solid #666;
+            color: #888;
+            padding: 10px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .reset-btn:hover {
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        .image-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+            .image-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Document Image Analyzer</h1>
+            <p>Upload a document image to analyze contours, detect folds, and check for overlaps</p>
+        </header>
+
+        <div class="upload-section" id="upload-section">
+            <input type="file" id="file-input" accept="image/*">
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+                Choose Image
+            </button>
+            <p class="upload-text">or drag and drop an image here</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing image...</p>
+        </div>
+
+        <div class="results" id="results">
+            <!-- Collapse Controls -->
+            <div class="collapse-controls">
+                <button onclick="collapseAll()">Collapse All</button>
+                <button onclick="expandAll()">Expand All</button>
+            </div>
+
+            <!-- Original Image -->
+            <div class="analysis-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h2>Original Image</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content">
+                    <div class="image-card">
+                        <img id="original-image" alt="Original">
+                        <div class="image-card-content">
+                            <div class="stats-grid" id="image-info"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contour Analysis -->
+            <div class="analysis-section">
+                <div class="section-header collapsed" onclick="toggleSection(this)">
+                    <h2>Contour Detection</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="image-comparison">
+                        <div class="image-card">
+                            <img id="contour-image" alt="Contours">
+                            <div class="image-card-content">
+                                <h3>Detected Contours</h3>
+                                <p>Green lines show detected contours/edges</p>
+                            </div>
+                        </div>
+                        <div class="image-card">
+                            <img id="edges-image" alt="Edges">
+                            <div class="image-card-content">
+                                <h3>Edge Detection</h3>
+                                <p>Canny edge detection result</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-grid" id="contour-stats"></div>
+                </div>
+            </div>
+
+            <!-- Fold Detection -->
+            <div class="analysis-section">
+                <div class="section-header collapsed" onclick="toggleSection(this)">
+                    <h2>Fold/Crease Detection</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="image-comparison">
+                        <div class="image-card">
+                            <img id="fold-image" alt="Folds">
+                            <div class="image-card-content">
+                                <h3>Detected Folds</h3>
+                                <p>Red lines indicate potential fold lines</p>
+                            </div>
+                        </div>
+                        <div class="image-card">
+                            <img id="gradient-image" alt="Gradient">
+                            <div class="image-card-content">
+                                <h3>Gradient Analysis</h3>
+                                <p>Shows intensity variations</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fold-analysis"></div>
+                </div>
+            </div>
+
+            <!-- Overlap Detection -->
+            <div class="analysis-section">
+                <div class="section-header collapsed" onclick="toggleSection(this)">
+                    <h2>Overlap Detection</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="image-card">
+                        <img id="overlap-image" alt="Overlap">
+                        <div class="image-card-content">
+                            <h3>Document Regions</h3>
+                            <p>Different colors indicate detected document regions</p>
+                        </div>
+                    </div>
+                    <div id="overlap-analysis"></div>
+                </div>
+            </div>
+
+            <!-- Hand/Obstruction Detection -->
+            <div class="analysis-section">
+                <div class="section-header collapsed" onclick="toggleSection(this)">
+                    <h2>Hand/Obstruction Detection</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="image-comparison">
+                        <div class="image-card">
+                            <img id="hand-image" alt="Hand Detection">
+                            <div class="image-card-content">
+                                <h3>Detected Obstructions</h3>
+                                <p>Red boxes indicate hands, orange indicates skin regions</p>
+                            </div>
+                        </div>
+                        <div class="image-card">
+                            <img id="skin-mask-image" alt="Skin Mask">
+                            <div class="image-card-content">
+                                <h3>Skin Detection Mask</h3>
+                                <p>Areas detected as skin/hand regions</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="hand-analysis"></div>
+                </div>
+            </div>
+
+            <!-- Distortion Detection -->
+            <div class="analysis-section">
+                <div class="section-header collapsed" onclick="toggleSection(this)">
+                    <h2>Distortion Detection</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="image-comparison">
+                        <div class="image-card">
+                            <img id="distortion-image" alt="Distortion">
+                            <div class="image-card-content">
+                                <h3>Document Corners</h3>
+                                <p>Green dots show detected corners, lines show boundaries</p>
+                            </div>
+                        </div>
+                        <div class="image-card">
+                            <img id="distortion-edges-image" alt="Distortion Edges">
+                            <div class="image-card-content">
+                                <h3>Edge Analysis</h3>
+                                <p>Edges used for distortion analysis</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="distortion-analysis"></div>
+                </div>
+            </div>
+
+            <!-- Document Cropping -->
+            <div class="analysis-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h2>Document Cropping</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content">
+                    <div class="image-comparison">
+                        <div class="image-card">
+                            <img id="corners-image" alt="Detected Corners">
+                            <div class="image-card-content">
+                                <h3>Detected Corners</h3>
+                                <p>TL=Red, TR=Green, BR=Blue, BL=Yellow</p>
+                            </div>
+                        </div>
+                        <div class="image-card">
+                            <img id="cropped-image" alt="Processed Document">
+                            <div class="image-card-content">
+                                <h3>Processed Document</h3>
+                                <p>White region extracted (no cropping)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="image-comparison" style="margin-top: 20px;">
+                        <div class="image-card">
+                            <img id="enhanced-image" alt="Enhanced">
+                            <div class="image-card-content">
+                                <h3>Enhanced</h3>
+                                <p>Contrast enhanced for readability</p>
+                            </div>
+                        </div>
+                        <div class="image-card">
+                            <img id="binary-image" alt="Binary">
+                            <div class="image-card-content">
+                                <h3>Binary/Scanned</h3>
+                                <p>Black and white scan effect</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="crop-analysis"></div>
+                    <div id="download-section" style="margin-top: 20px; display: none;">
+                        <button class="upload-btn" onclick="downloadCropped()" style="padding: 10px 25px; font-size: 1rem;">
+                            Download Enhanced Image
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM Document Analysis -->
+            <div class="analysis-section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <h2>LLM Document Analysis</h2>
+                    <span class="collapse-icon">&#9660;</span>
+                </div>
+                <div class="section-content">
+                    <p style="color: #888; margin-bottom: 15px;">Send document to AI for OCR and entity extraction</p>
+
+                    <!-- API Key Configuration -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px;">
+                        <label style="display: block; margin-bottom: 10px; color: #00d4ff;">OpenRouter API Key:</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="password" id="api-key-input" placeholder="sk-or-v1-..."
+                                style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #444; background: #1a1a2e; color: #fff;">
+                            <button onclick="setApiKey()" class="upload-btn" style="padding: 10px 20px; font-size: 0.9rem;">
+                                Set Key
+                            </button>
+                        </div>
+                        <div id="api-key-status" style="margin-top: 10px; font-size: 0.9rem;"></div>
+                    </div>
+
+                    <!-- Pipeline Selection -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <button onclick="selectPipeline('advanced')" id="pipeline-advanced-btn" class="pipeline-tab active" style="flex: 1; padding: 12px; border: 2px solid #00d4ff; background: rgba(0,212,255,0.2); color: #00d4ff; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                Advanced Pipeline
+                            </button>
+                            <button onclick="selectPipeline('legacy')" id="pipeline-legacy-btn" class="pipeline-tab" style="flex: 1; padding: 12px; border: 2px solid #444; background: transparent; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                Legacy (GPT-4o)
+                            </button>
+                        </div>
+
+                        <!-- Advanced Pipeline Info -->
+                        <div id="pipeline-advanced-info" style="padding: 15px; background: rgba(0,212,255,0.1); border-radius: 10px;">
+                            <h4 style="color: #00d4ff; margin: 0 0 10px 0;">Advanced Pipeline</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.85rem;">
+                                <span style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">1. Preprocess</span>
+                                <span style="color: #666;">→</span>
+                                <span style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">2. Classify</span>
+                                <span style="color: #666;">→</span>
+                                <span style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">3. OCR (Qwen VL)</span>
+                                <span style="color: #666;">→</span>
+                                <span style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">4. Extract</span>
+                            </div>
+                            <p style="color: #888; font-size: 0.8rem; margin: 10px 0 0 0;">
+                                Uses preprocessed images with multi-step extraction pipeline
+                            </p>
+                        </div>
+
+                        <!-- Legacy Pipeline Info -->
+                        <div id="pipeline-legacy-info" style="display: none; padding: 15px; background: rgba(123,44,191,0.1); border-radius: 10px;">
+                            <h4 style="color: #7b2cbf; margin: 0 0 10px 0;">Legacy Pipeline (Direct Vision Model)</h4>
+
+                            <!-- Model Selector -->
+                            <div style="margin-bottom: 12px;">
+                                <label style="color: #888; font-size: 0.85rem; display: block; margin-bottom: 6px;">Select Model:</label>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button onclick="selectLegacyModel('gpt-4o')" id="legacy-model-gpt4o" class="model-btn active" style="padding: 8px 16px; border: 2px solid #7b2cbf; background: rgba(123,44,191,0.3); color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                        GPT-4o
+                                    </button>
+                                    <button onclick="selectLegacyModel('qwen-vl')" id="legacy-model-qwen" class="model-btn" style="padding: 8px 16px; border: 2px solid #444; background: transparent; color: #888; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                        Qwen3 VL
+                                    </button>
+                                    <button onclick="selectLegacyModel('gemini')" id="legacy-model-gemini" class="model-btn" style="padding: 8px 16px; border: 2px solid #444; background: transparent; color: #888; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                        Gemini Flash
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 0.85rem;">
+                                <span style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">Original Image</span>
+                                <span style="color: #666;">→</span>
+                                <span id="legacy-model-display" style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">GPT-4o</span>
+                                <span style="color: #666;">→</span>
+                                <span style="background: #1a1a2e; padding: 5px 10px; border-radius: 5px;">JSON Output</span>
+                            </div>
+                            <p style="color: #888; font-size: 0.8rem; margin: 10px 0 0 0;">
+                                Sends raw original image directly to vision model without preprocessing
+                            </p>
+                        </div>
+                    </div>
+
+                    <button onclick="runSelectedPipeline()" class="upload-btn" id="llm-analyze-btn" style="width: 100%; padding: 15px; font-size: 1.1rem;">
+                        Extract Document
+                    </button>
+
+                    <!-- LLM Loading -->
+                    <div id="llm-loading" style="display: none; text-align: center; padding: 30px;">
+                        <div class="spinner"></div>
+                        <p>Sending to LLM... This may take a minute.</p>
+                    </div>
+
+                    <!-- LLM Results -->
+                    <div id="llm-results" style="display: none; margin-top: 20px;">
+                        <!-- Timing Display -->
+                        <div id="llm-timing" style="margin-bottom: 20px; padding: 15px; background: rgba(0,212,255,0.1); border-radius: 10px;"></div>
+
+                        <!-- Images Sent to Vision Model -->
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="color: #7b2cbf; margin-bottom: 10px;">Images Sent to Vision Model</h3>
+
+                            <!-- Crop warning banner -->
+                            <div id="llm-crop-warning" style="display: none; margin-bottom: 15px; padding: 12px; background: rgba(255,193,7,0.15); border-left: 4px solid #ffc107; border-radius: 4px;">
+                                <strong style="color: #ffc107;">⚠️ Crop Warning:</strong>
+                                <span id="llm-crop-warning-text" style="color: #fff; margin-left: 8px;"></span>
+                            </div>
+
+                            <!-- Triple image mode (Original + Binary + Enhanced) -->
+                            <div id="llm-triple-images-container" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+                                <div class="image-card" style="text-align: center;">
+                                    <div style="background: #1a1a2e; padding: 8px; border-radius: 8px 8px 0 0; color: #00d4ff; font-weight: bold; font-size: 0.85em;">
+                                        IMAGE 1: Original (Uncropped)
+                                    </div>
+                                    <img id="llm-image-original-3" alt="Original image" style="max-height: 280px; border-radius: 0 0 8px 8px;">
+                                </div>
+                                <div class="image-card" style="text-align: center;">
+                                    <div style="background: #1a1a2e; padding: 8px; border-radius: 8px 8px 0 0; color: #a855f7; font-weight: bold; font-size: 0.85em;">
+                                        IMAGE 2: Binary
+                                    </div>
+                                    <img id="llm-image-binary-3" alt="Binary image" style="max-height: 280px; border-radius: 0 0 8px 8px;">
+                                </div>
+                                <div class="image-card" style="text-align: center;">
+                                    <div style="background: #1a1a2e; padding: 8px; border-radius: 8px 8px 0 0; color: #22c55e; font-weight: bold; font-size: 0.85em;">
+                                        IMAGE 3: Enhanced
+                                    </div>
+                                    <img id="llm-image-enhanced-3" alt="Enhanced image" style="max-height: 280px; border-radius: 0 0 8px 8px;">
+                                </div>
+                            </div>
+
+                            <!-- Dual image mode (Original + Binary) -->
+                            <div id="llm-dual-images-container" style="display: none; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div class="image-card" style="text-align: center;">
+                                    <div style="background: #1a1a2e; padding: 8px; border-radius: 8px 8px 0 0; color: #00d4ff; font-weight: bold; font-size: 0.9em;">
+                                        IMAGE 1: Original (Uncropped)
+                                    </div>
+                                    <img id="llm-image-original-2" alt="Original image" style="max-height: 350px; border-radius: 0 0 8px 8px;">
+                                </div>
+                                <div class="image-card" style="text-align: center;">
+                                    <div style="background: #1a1a2e; padding: 8px; border-radius: 8px 8px 0 0; color: #a855f7; font-weight: bold; font-size: 0.9em;">
+                                        IMAGE 2: Binary
+                                    </div>
+                                    <img id="llm-image-binary-2" alt="Binary image" style="max-height: 350px; border-radius: 0 0 8px 8px;">
+                                </div>
+                            </div>
+
+                            <!-- Single image mode fallback -->
+                            <div id="llm-single-image-container" class="image-card" style="display: none;">
+                                <img id="llm-image-sent" alt="Image sent to LLM" style="max-height: 400px;">
+                            </div>
+                        </div>
+
+                        <!-- HTML Output -->
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="color: #7b2cbf; margin-bottom: 10px;">Generated HTML</h3>
+
+                            <!-- Tab buttons -->
+                            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                                <button onclick="showHtmlTab('rendered')" id="tab-rendered" class="html-tab active"
+                                    style="padding: 8px 20px; border: 1px solid #444; border-radius: 5px 5px 0 0; background: rgba(0,212,255,0.2); color: #00d4ff; cursor: pointer;">
+                                    Rendered Preview
+                                </button>
+                                <button onclick="showHtmlTab('raw')" id="tab-raw" class="html-tab"
+                                    style="padding: 8px 20px; border: 1px solid #444; border-radius: 5px 5px 0 0; background: rgba(255,255,255,0.05); color: #888; cursor: pointer;">
+                                    Raw HTML
+                                </button>
+                            </div>
+
+                            <!-- Rendered HTML Preview -->
+                            <div id="html-rendered-container" style="background: #fff; border-radius: 10px; padding: 20px; min-height: 200px; max-height: 500px; overflow: auto;">
+                                <iframe id="llm-html-rendered" style="width: 100%; min-height: 400px; border: none; background: #fff;"></iframe>
+                            </div>
+
+                            <!-- Raw HTML Code -->
+                            <div id="html-raw-container" style="display: none; background: #0a0a15; border-radius: 10px; padding: 15px; max-height: 400px; overflow: auto;">
+                                <pre id="llm-html-output" style="white-space: pre-wrap; word-wrap: break-word; color: #00ff64; font-size: 0.85rem; margin: 0;"></pre>
+                            </div>
+                        </div>
+
+                        <!-- Extracted Entities JSON -->
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="color: #7b2cbf; margin-bottom: 10px;">Extracted Entities (Raw JSON)</h3>
+                            <div style="background: #0a0a15; border-radius: 10px; padding: 15px; max-height: 500px; overflow: auto;">
+                                <pre id="llm-json-output" style="white-space: pre-wrap; word-wrap: break-word; color: #ffc800; font-size: 0.9rem; margin: 0;"></pre>
+                            </div>
+                        </div>
+
+                        <!-- Formatted Entities Display -->
+                        <div id="formatted-entities" style="margin-bottom: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="reset-btn" onclick="resetAnalysis()">Analyze Another Image</button>
+        </div>
+    </div>
+
+    <script>
+        const uploadSection = document.getElementById('upload-section');
+        const fileInput = document.getElementById('file-input');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+
+        // Collapse/Expand Functions
+        function toggleSection(header) {
+            header.classList.toggle('collapsed');
+            const content = header.nextElementSibling;
+            content.classList.toggle('collapsed');
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.classList.add('collapsed');
+                header.nextElementSibling.classList.add('collapsed');
+            });
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.classList.remove('collapsed');
+                header.nextElementSibling.classList.remove('collapsed');
+            });
+        }
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        function processFile(file) {
+            console.log('Processing file:', file.name);
+            // Store file for datalabs flow
+            window.currentFile = file;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            uploadSection.style.display = 'none';
+            loading.style.display = 'block';
+            results.style.display = 'none';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Response received:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Data received:', data);
+                if (data.error) {
+                    alert(data.error);
+                    resetAnalysis();
+                    return;
+                }
+                displayResults(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error processing image: ' + error.message);
+                resetAnalysis();
+            });
+        }
+
+        function displayResults(data) {
+            console.log('Displaying results...', data);
+            loading.style.display = 'none';
+            results.style.display = 'block';
+
+            // Validate data
+            if (!data || !data.original) {
+                console.error('Invalid data received:', data);
+                alert('Invalid response from server');
+                return;
+            }
+
+            // Original image
+            document.getElementById('original-image').src = 'data:image/png;base64,' + data.original;
+
+            // Image info with timing
+            const imageInfo = data.image_info || {};
+            const timing = data.timing || {};
+            const extractedClass = imageInfo.white_region_extracted ? 'status-good' : 'status-warning';
+            document.getElementById('image-info').innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${imageInfo.original_width || imageInfo.width}</div>
+                    <div class="stat-label">Original Width</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${imageInfo.original_height || imageInfo.height}</div>
+                    <div class="stat-label">Original Height</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${imageInfo.processed_width || imageInfo.width}</div>
+                    <div class="stat-label">Processed Width</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${imageInfo.processed_height || imageInfo.height}</div>
+                    <div class="stat-label">Processed Height</div>
+                </div>
+                <div class="stat-item">
+                    <span class="status-badge ${extractedClass}">${imageInfo.white_region_extracted ? 'Yes' : 'No'}</span>
+                    <div class="stat-label">Document Extracted</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" style="color: #00d4ff;">${timing.processing_seconds || 0}s</div>
+                    <div class="stat-label">Processing Time</div>
+                </div>
+            `;
+
+            // Store extracted image for LLM if available
+            if (data.extracted && data.extracted.success) {
+                window.imageData.extracted = data.extracted.image;
+            }
+
+            // Contours
+            document.getElementById('contour-image').src = 'data:image/png;base64,' + data.contours.image;
+            document.getElementById('edges-image').src = 'data:image/png;base64,' + data.contours.edges;
+
+            const contourStats = data.contours.stats;
+            document.getElementById('contour-stats').innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${contourStats.total_contours}</div>
+                    <div class="stat-label">Total Contours</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${contourStats.large_contours}</div>
+                    <div class="stat-label">Large Contours</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${contourStats.small_contours}</div>
+                    <div class="stat-label">Small Contours</div>
+                </div>
+            `;
+
+            // Folds
+            document.getElementById('fold-image').src = 'data:image/png;base64,' + data.folds.image;
+            document.getElementById('gradient-image').src = 'data:image/png;base64,' + data.folds.gradient;
+
+            const foldAnalysis = data.folds.analysis;
+            const foldSeverityClass = foldAnalysis.fold_severity === 'None' ? 'status-good' :
+                                       foldAnalysis.fold_severity === 'Medium' ? 'status-warning' : 'status-danger';
+            document.getElementById('fold-analysis').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${foldAnalysis.potential_folds_detected}</div>
+                        <div class="stat-label">Fold Lines Detected</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-badge ${foldSeverityClass}">${foldAnalysis.fold_severity}</span>
+                        <div class="stat-label">Fold Severity</div>
+                    </div>
+                </div>
+            `;
+
+            // Overlap
+            document.getElementById('overlap-image').src = 'data:image/png;base64,' + data.overlap.image;
+
+            const overlapAnalysis = data.overlap.analysis;
+            const overlapClass = overlapAnalysis.has_overlap ? 'status-warning' : 'status-good';
+            document.getElementById('overlap-analysis').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${overlapAnalysis.document_regions_detected}</div>
+                        <div class="stat-label">Document Regions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${overlapAnalysis.overlapping_pairs}</div>
+                        <div class="stat-label">Overlapping Pairs</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-badge ${overlapClass}">${overlapAnalysis.has_overlap ? 'Yes' : 'No'}</span>
+                        <div class="stat-label">Overlap Detected</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${overlapAnalysis.overlap_confidence}</div>
+                        <div class="stat-label">Confidence</div>
+                    </div>
+                </div>
+            `;
+
+            // Hand Detection
+            document.getElementById('hand-image').src = 'data:image/png;base64,' + data.hand.image;
+            document.getElementById('skin-mask-image').src = 'data:image/png;base64,' + data.hand.skin_mask;
+
+            const handAnalysis = data.hand.analysis;
+            const handClass = handAnalysis.obstruction_level === 'Low' ? 'status-good' :
+                              handAnalysis.obstruction_level === 'Medium' ? 'status-warning' : 'status-danger';
+            const handDetectedClass = handAnalysis.hand_detected ? 'status-danger' : 'status-good';
+            document.getElementById('hand-analysis').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="status-badge ${handDetectedClass}">${handAnalysis.hand_detected ? 'Yes' : 'No'}</span>
+                        <div class="stat-label">Hand Detected</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${handAnalysis.skin_regions_detected}</div>
+                        <div class="stat-label">Skin Regions</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${handAnalysis.coverage_percent}%</div>
+                        <div class="stat-label">Coverage</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-badge ${handClass}">${handAnalysis.obstruction_level}</span>
+                        <div class="stat-label">Obstruction Level</div>
+                    </div>
+                </div>
+            `;
+
+            // Distortion Detection
+            document.getElementById('distortion-image').src = 'data:image/png;base64,' + data.distortion.image;
+            document.getElementById('distortion-edges-image').src = 'data:image/png;base64,' + data.distortion.edges;
+
+            const distortionAnalysis = data.distortion.analysis;
+            const distortionClass = distortionAnalysis.distortion_level === 'Low' ? 'status-good' :
+                                    distortionAnalysis.distortion_level === 'Medium' ? 'status-warning' : 'status-danger';
+            const distortedClass = distortionAnalysis.is_distorted ? 'status-warning' : 'status-good';
+            const distortionTypes = distortionAnalysis.distortion_type.length > 0 ?
+                                    distortionAnalysis.distortion_type.join(', ') : 'None';
+            document.getElementById('distortion-analysis').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="status-badge ${distortedClass}">${distortionAnalysis.is_distorted ? 'Yes' : 'No'}</span>
+                        <div class="stat-label">Is Distorted</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-badge ${distortionClass}">${distortionAnalysis.distortion_level || 'Unknown'}</span>
+                        <div class="stat-label">Distortion Level</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${distortionAnalysis.distortion_score}</div>
+                        <div class="stat-label">Distortion Score</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${distortionTypes}</div>
+                        <div class="stat-label">Distortion Types</div>
+                    </div>
+                </div>
+                ${distortionAnalysis.corner_angles ? `
+                <div class="stats-grid" style="margin-top: 15px;">
+                    <div class="stat-item">
+                        <div class="stat-value">${distortionAnalysis.perspective_skew}%</div>
+                        <div class="stat-label">Perspective Skew</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${distortionAnalysis.angle_deviation}</div>
+                        <div class="stat-label">Angle Deviation</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${distortionAnalysis.edge_irregularity}%</div>
+                        <div class="stat-label">Edge Irregularity</div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+
+            // Document Processing (cropping disabled)
+            // Use extracted image for display, or distortion edges as fallback for corners view
+            document.getElementById('corners-image').src = 'data:image/png;base64,' + data.distortion.edges;
+            document.getElementById('cropped-image').src = 'data:image/png;base64,' + data.extracted.image;
+            document.getElementById('enhanced-image').src = 'data:image/png;base64,' + data.crop.enhanced;
+            document.getElementById('binary-image').src = 'data:image/png;base64,' + data.crop.binary;
+
+            // Store enhanced image data for download
+            window.croppedImageData = data.crop.enhanced;
+
+            // Store all image variants for LLM analysis
+            window.imageData = {
+                original: data.original,
+                extracted: data.extracted.image,
+                enhanced: data.crop.enhanced,
+                binary: data.crop.binary,
+                edges: data.contours.edges,
+                contour_edges: data.distortion.edges,
+                gradient: data.folds.gradient
+            };
+
+            // Store crop info for decision making (cropping disabled)
+            window.cropInfo = data.crop.info;
+
+            const cropInfo = data.crop.info;
+            const extractionSuccess = data.extracted.success;
+            // imageInfo already declared above, reuse it
+
+            document.getElementById('crop-analysis').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="status-badge ${extractionSuccess ? 'status-good' : 'status-warning'}">
+                            ${extractionSuccess ? 'Yes' : 'No'}
+                        </span>
+                        <div class="stat-label">White Region Extracted</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="status-badge status-good">
+                            DISABLED
+                        </span>
+                        <div class="stat-label">Cropping</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${imageInfo.processed_width || 'N/A'} x ${imageInfo.processed_height || 'N/A'}</div>
+                        <div class="stat-label">Image Size</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${imageInfo.aspect_ratio || 'N/A'}</div>
+                        <div class="stat-label">Aspect Ratio</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: rgba(34,197,94,0.15); border-left: 4px solid #22c55e; border-radius: 4px;">
+                    <strong style="color: #22c55e;">✓ No Cropping:</strong>
+                    <span style="color: #fff; margin-left: 8px;">Full image preserved to prevent data loss. Enhancement applied directly.</span>
+                </div>
+            `;
+
+            // Always show download button (for enhanced image)
+            document.getElementById('download-section').style.display = 'block';
+            console.log('Results displayed successfully');
+        }
+
+        function downloadCropped() {
+            if (window.croppedImageData) {
+                const link = document.createElement('a');
+                link.href = 'data:image/png;base64,' + window.croppedImageData;
+                link.download = 'enhanced_document.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // LLM Analysis Functions
+        window.imageData = {};  // Store all image variants
+        window.currentFile = null;  // Store uploaded file for datalabs
+        window.selectedPipeline = 'advanced';  // Default pipeline
+        window.selectedLegacyModel = 'gpt-4o';  // Default legacy model
+
+        // Legacy model selection
+        function selectLegacyModel(model) {
+            window.selectedLegacyModel = model;
+
+            const modelNames = {
+                'gpt-4o': 'GPT-4o',
+                'qwen-vl': 'Qwen3 VL',
+                'gemini': 'Gemini Flash'
+            };
+
+            // Update button styles
+            document.getElementById('legacy-model-gpt4o').style.border = model === 'gpt-4o' ? '2px solid #7b2cbf' : '2px solid #444';
+            document.getElementById('legacy-model-gpt4o').style.background = model === 'gpt-4o' ? 'rgba(123,44,191,0.3)' : 'transparent';
+            document.getElementById('legacy-model-gpt4o').style.color = model === 'gpt-4o' ? '#fff' : '#888';
+
+            document.getElementById('legacy-model-qwen').style.border = model === 'qwen-vl' ? '2px solid #7b2cbf' : '2px solid #444';
+            document.getElementById('legacy-model-qwen').style.background = model === 'qwen-vl' ? 'rgba(123,44,191,0.3)' : 'transparent';
+            document.getElementById('legacy-model-qwen').style.color = model === 'qwen-vl' ? '#fff' : '#888';
+
+            document.getElementById('legacy-model-gemini').style.border = model === 'gemini' ? '2px solid #7b2cbf' : '2px solid #444';
+            document.getElementById('legacy-model-gemini').style.background = model === 'gemini' ? 'rgba(123,44,191,0.3)' : 'transparent';
+            document.getElementById('legacy-model-gemini').style.color = model === 'gemini' ? '#fff' : '#888';
+
+            // Update display
+            document.getElementById('legacy-model-display').textContent = modelNames[model];
+        }
+
+        // Pipeline selection
+        function selectPipeline(pipeline) {
+            window.selectedPipeline = pipeline;
+
+            const advBtn = document.getElementById('pipeline-advanced-btn');
+            const legBtn = document.getElementById('pipeline-legacy-btn');
+            const advInfo = document.getElementById('pipeline-advanced-info');
+            const legInfo = document.getElementById('pipeline-legacy-info');
+
+            if (pipeline === 'advanced') {
+                advBtn.style.border = '2px solid #00d4ff';
+                advBtn.style.background = 'rgba(0,212,255,0.2)';
+                advBtn.style.color = '#00d4ff';
+                legBtn.style.border = '2px solid #444';
+                legBtn.style.background = 'transparent';
+                legBtn.style.color = '#888';
+                advInfo.style.display = 'block';
+                legInfo.style.display = 'none';
+            } else {
+                legBtn.style.border = '2px solid #7b2cbf';
+                legBtn.style.background = 'rgba(123,44,191,0.2)';
+                legBtn.style.color = '#7b2cbf';
+                advBtn.style.border = '2px solid #444';
+                advBtn.style.background = 'transparent';
+                advBtn.style.color = '#888';
+                advInfo.style.display = 'none';
+                legInfo.style.display = 'block';
+            }
+        }
+
+        // Run selected pipeline
+        function runSelectedPipeline() {
+            if (window.selectedPipeline === 'legacy') {
+                runLegacyExtraction();
+            } else {
+                runExtraction();
+            }
+        }
+
+        // Legacy extraction - Direct Vision Model
+        function runLegacyExtraction() {
+            if (!window.currentFile) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('llm-loading').style.display = 'block';
+            document.getElementById('llm-results').style.display = 'none';
+            document.getElementById('llm-analyze-btn').disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', window.currentFile);
+            formData.append('model', window.selectedLegacyModel);
+
+            fetch('/extract-legacy', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                displayLegacyResults(data);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        // Display legacy extraction results
+        function displayLegacyResults(data) {
+            document.getElementById('llm-results').style.display = 'block';
+
+            const extraction = data.extraction || {};
+            const classification = extraction.classification || [];
+            const extracted = extraction.extracted || {};
+
+            // Get model display name
+            const modelDisplayName = data.model ? data.model.split('/').pop() : 'Unknown';
+
+            // Build timing display
+            document.getElementById('llm-timing').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.8rem; font-weight: bold; color: #7b2cbf;">${(data.processing_time_ms / 1000).toFixed(2)}s</div>
+                        <div class="stat-label">Total Time</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #00d4ff;">${modelDisplayName}</div>
+                        <div class="stat-label">Model</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: #ffc107;">${classification[0]?.document_type || 'unknown'}</div>
+                        <div class="stat-label">Document Type</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: rgba(123,44,191,0.2); border-radius: 8px;">
+                    <strong style="color: #7b2cbf;">Pipeline:</strong> Legacy (Original Image → ${modelDisplayName} → JSON)
+                </div>
+            `;
+
+            // Hide advanced pipeline UI elements
+            document.getElementById('llm-triple-images-container').style.display = 'none';
+            document.getElementById('llm-dual-images-container').style.display = 'none';
+            document.getElementById('llm-single-image-container').style.display = 'none';
+            document.getElementById('llm-crop-warning').style.display = 'none';
+
+            // Build extraction display
+            let extractionHtml = '<h3 style="color: #7b2cbf; margin-bottom: 15px;">Extracted Information</h3>';
+
+            // Classification
+            if (classification.length > 0) {
+                extractionHtml += '<div style="margin-bottom: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">';
+                extractionHtml += '<strong style="color: #00d4ff;">Classification:</strong><br>';
+                classification.forEach(c => {
+                    extractionHtml += `<span style="color: #ffc107;">${c.document_type}</span> - ${c.reasoning}<br>`;
+                });
+                extractionHtml += '</div>';
+            }
+
+            // Extracted fields
+            extractionHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px;">';
+
+            const fields = ['supplier', 'vat_number', 'transaction_date', 'payment_method', 'total_amount'];
+            fields.forEach(field => {
+                const fieldData = extracted[field];
+                if (fieldData) {
+                    const statusColor = fieldData.status === 'complete_value' ? '#28a745' :
+                                       fieldData.status === 'incomplete_value' ? '#ffc107' : '#dc3545';
+                    extractionHtml += `
+                        <div style="padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px; border-left: 3px solid ${statusColor};">
+                            <div style="color: #888; font-size: 0.85rem; text-transform: uppercase;">${field.replace('_', ' ')}</div>
+                            <div style="color: #fff; font-size: 1.1rem; margin-top: 4px;">${fieldData.value || 'N/A'}</div>
+                            ${fieldData.notes ? `<div style="color: #888; font-size: 0.8rem; margin-top: 4px;">${fieldData.notes}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+            extractionHtml += '</div>';
+
+            // VAT Breakdown
+            if (extracted.vat_breakdown) {
+                const vat = extracted.vat_breakdown;
+                extractionHtml += `
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <strong style="color: #00d4ff;">VAT Breakdown:</strong>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px;">
+                            <div><span style="color: #888;">Rate:</span> ${vat.rate || 'N/A'}</div>
+                            <div><span style="color: #888;">Net:</span> ${vat.net || 'N/A'}</div>
+                            <div><span style="color: #888;">VAT:</span> ${vat.vat || 'N/A'}</div>
+                            <div><span style="color: #888;">Gross:</span> ${vat.gross || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Items
+            if (extracted.items && extracted.items.length > 0) {
+                extractionHtml += `
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+                        <strong style="color: #00d4ff;">Line Items (${extracted.items.length}):</strong>
+                        <div style="margin-top: 8px; max-height: 200px; overflow-y: auto;">
+                `;
+                extracted.items.forEach((item, idx) => {
+                    extractionHtml += `
+                        <div style="padding: 8px; margin-bottom: 5px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+                            <span style="color: #888;">${idx + 1}.</span> ${item.description || 'N/A'}
+                            <span style="float: right; color: #00d4ff;">${item.total || item.unit_price || ''}</span>
+                        </div>
+                    `;
+                });
+                extractionHtml += '</div></div>';
+            }
+
+            // Summary
+            if (extraction.summary) {
+                extractionHtml += `
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,212,255,0.1); border-radius: 8px; border-left: 3px solid #00d4ff;">
+                        <strong style="color: #00d4ff;">📋 Summary:</strong>
+                        <p style="color: #fff; margin: 10px 0 0 0; line-height: 1.6;">${extraction.summary}</p>
+                    </div>
+                `;
+            }
+
+            document.getElementById('formatted-entities').innerHTML = extractionHtml;
+
+            // Show raw JSON
+            document.getElementById('llm-json-output').textContent = JSON.stringify(extraction, null, 2);
+
+            // Update HTML content area with note
+            document.getElementById('llm-html-output').innerHTML = `Legacy pipeline returns structured JSON directly.\nNo HTML intermediate step.`;
+        }
+
+        // Unified extraction function (Advanced Pipeline)
+        function runExtraction() {
+            if (!window.currentFile) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('llm-loading').style.display = 'block';
+            document.getElementById('llm-results').style.display = 'none';
+            document.getElementById('llm-analyze-btn').disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', window.currentFile);
+
+            fetch('/extract', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    alert('Error: ' + (data.error || 'Extraction failed'));
+                    return;
+                }
+                displayExtractionResults(data);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function displayExtractionResults(data) {
+            document.getElementById('llm-results').style.display = 'block';
+
+            const steps = data.steps || {};
+            const classification = steps.classification || {};
+            const visionStep = steps.vision_to_html || {};
+            const extractionStep = steps.extraction || {};
+            const timing = data.timing || {};
+
+            // Build timing display with pipeline steps
+            document.getElementById('llm-timing').innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                        <div class="stat-item" style="padding: 10px 15px; flex: 1; min-width: 100px;">
+                            <div class="stat-value" style="color: #00d4ff;">${(data.total_time_ms / 1000).toFixed(2)}s</div>
+                            <div class="stat-label">Total Time</div>
+                        </div>
+                        <div class="stat-item" style="padding: 10px 15px; flex: 1; min-width: 100px;">
+                            <div class="stat-value" style="color: #7b2cbf;">${((timing.classification_ms || 0) / 1000).toFixed(2)}s</div>
+                            <div class="stat-label">Classify</div>
+                        </div>
+                        <div class="stat-item" style="padding: 10px 15px; flex: 1; min-width: 100px;">
+                            <div class="stat-value" style="color: #ffc800;">${((timing.vision_to_html_ms || 0) / 1000).toFixed(2)}s</div>
+                            <div class="stat-label">OCR</div>
+                        </div>
+                        <div class="stat-item" style="padding: 10px 15px; flex: 1; min-width: 100px;">
+                            <div class="stat-value" style="color: #00ff64;">${((timing.extraction_ms || 0) / 1000).toFixed(2)}s</div>
+                            <div class="stat-label">Extract</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                    <div style="background: rgba(123,44,191,0.3); padding: 8px 15px; border-radius: 8px;">
+                        <strong>Document Type:</strong>
+                        <span style="color: #ffc800; text-transform: uppercase;">${data.document_type || 'unknown'}</span>
+                        <span style="color: #888; font-size: 0.8rem;">(${((classification.confidence || 0) * 100).toFixed(0)}%)</span>
+                    </div>
+                    <div style="background: rgba(0,212,255,0.2); padding: 8px 15px; border-radius: 8px; font-size: 0.85rem;">
+                        <strong>Extractor:</strong> ${extractionStep.extractor || data.document_type}
+                    </div>
+                </div>
+                ${classification.reasoning ? `<div style="margin-top: 10px; color: #888; font-size: 0.8rem;"><em>${classification.reasoning}</em></div>` : ''}
+            `;
+
+            // Show images - original and enhanced that were sent
+            if (window.imageData.original) {
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + window.imageData.enhanced;
+            }
+
+            // Show HTML tabs
+            document.querySelector('#tab-rendered').parentElement.style.display = 'flex';
+            document.getElementById('html-rendered-container').style.display = 'block';
+
+            // Show raw HTML
+            document.getElementById('llm-html-output').textContent = data.html || '';
+
+            // Render HTML in iframe
+            const iframe = document.getElementById('llm-html-rendered');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: 'Courier New', monospace; padding: 10px; margin: 0; background: #fff; color: #000; }
+                        .document { max-width: 400px; margin: 0 auto; }
+                        table { width: 100%; border-collapse: collapse; }
+                        td, th { padding: 4px 8px; border-bottom: 1px dotted #ddd; }
+                    </style>
+                </head>
+                <body>${data.html || ''}</body>
+                </html>
+            `);
+            iframeDoc.close();
+
+            setTimeout(() => {
+                const height = iframeDoc.body.scrollHeight + 40;
+                iframe.style.height = Math.min(Math.max(height, 200), 600) + 'px';
+            }, 100);
+
+            showHtmlTab('rendered');
+
+            // Show extracted JSON
+            document.getElementById('llm-json-output').textContent = JSON.stringify(data.extracted_data || {}, null, 2);
+
+            // Display formatted entities
+            displayFormattedEntities(data.extracted_data || {}, classification.confidence || 0, []);
+        }
+
+        function setApiKey() {
+            const apiKey = document.getElementById('api-key-input').value.trim();
+            if (!apiKey) {
+                document.getElementById('api-key-status').innerHTML =
+                    '<span style="color: #ff3232;">Please enter an API key</span>';
+                return;
+            }
+
+            fetch('/set-api-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: apiKey })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('api-key-status').innerHTML =
+                        '<span style="color: #00ff64;">API key configured successfully</span>';
+                    document.getElementById('api-key-input').value = '';
+                } else {
+                    document.getElementById('api-key-status').innerHTML =
+                        '<span style="color: #ff3232;">' + (data.error || 'Failed to set API key') + '</span>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('api-key-status').innerHTML =
+                    '<span style="color: #ff3232;">Error: ' + error.message + '</span>';
+            });
+        }
+
+        function checkApiKey() {
+            fetch('/check-api-key')
+            .then(response => response.json())
+            .then(data => {
+                if (data.configured) {
+                    document.getElementById('api-key-status').innerHTML =
+                        '<span style="color: #00ff64;">API key configured (' + data.key_preview + ')</span>';
+                }
+            });
+        }
+
+        function runLlmAnalysis() {
+            const flowSelect = document.getElementById('extraction-flow-select').value;
+            const imageSelect = document.getElementById('llm-image-select').value;
+
+            // Show loading
+            document.getElementById('llm-loading').style.display = 'block';
+            document.getElementById('llm-results').style.display = 'none';
+            document.getElementById('llm-analyze-btn').disabled = true;
+
+            if (flowSelect === 'smart') {
+                // Smart flow - classify then extract with type-specific prompt
+                runSmartAnalysis(imageSelect);
+            } else if (flowSelect === 'smart-enhanced') {
+                // Smart + preprocessing flow
+                runSmartEnhancedAnalysis(imageSelect);
+            } else if (flowSelect === 'vision-html') {
+                // Vision to HTML flow (Qwen VL)
+                runVisionToHtmlAnalysis(imageSelect);
+            } else if (flowSelect === 'vision-html-enhanced') {
+                // Vision to HTML with preprocessing
+                runVisionToHtmlEnhanced(imageSelect);
+            } else if (flowSelect === 'vision-chain') {
+                // Vision Chain: Qwen VL → HTML → Gemini → Extraction
+                runVisionChainAnalysis(imageSelect);
+            } else if (flowSelect === 'vision-chain-enhanced') {
+                // Vision Chain with preprocessing
+                runVisionChainEnhanced(imageSelect);
+            } else {
+                // Original flow
+                runOriginalAnalysis(imageSelect);
+            }
+        }
+
+        function runVisionToHtmlAnalysis(imageSelect) {
+            // Get selected image
+            let imageBase64 = window.imageData[imageSelect] || window.imageData.enhanced || window.imageData.original;
+
+            if (!imageBase64) {
+                hideLoading();
+                alert('No image available. Please upload an image first.');
+                return;
+            }
+
+            fetch('/vision/to-html', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageBase64 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    alert('Error: ' + (data.error || 'Failed to generate HTML'));
+                    return;
+                }
+                displayVisionHtmlResults(data, imageBase64, imageSelect);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function runVisionToHtmlEnhanced(imageSelect) {
+            if (!window.currentFile) {
+                hideLoading();
+                alert('No file available. Please upload an image first.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', window.currentFile);
+
+            fetch(`/vision/to-html-enhanced?use_image=${imageSelect}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    alert('Error: ' + (data.error || 'Failed to generate HTML'));
+                    return;
+                }
+                displayVisionHtmlResults(data, null, data.image_used || imageSelect);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function displayVisionHtmlResults(data, imageSent, imageType) {
+            document.getElementById('llm-results').style.display = 'block';
+
+            // Show timing and model info
+            document.getElementById('llm-timing').innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;">
+                    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                        <div class="stat-item" style="padding:10px 15px;">
+                            <div class="stat-value" style="color: #00d4ff;">${(data.processing_time_ms / 1000).toFixed(2)}s</div>
+                            <div class="stat-label">Processing Time</div>
+                        </div>
+                        <div class="stat-item" style="padding:10px 15px;">
+                            <div class="stat-value" style="color: #00ff64;">${data.char_count || 0}</div>
+                            <div class="stat-label">HTML Characters</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="background:linear-gradient(90deg,#00d4ff,#7b2cbf);padding:8px 15px;border-radius:20px;font-weight:bold;">
+                            🤖 ${data.model || 'qwen/qwen3-4b:free'}
+                        </div>
+                        <div style="color:#888;font-size:0.8rem;margin-top:5px;">Image sent: ${imageType}</div>
+                    </div>
+                </div>
+            `;
+
+            // Show image sent
+            if (imageSent) {
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + imageSent;
+            } else if (window.imageData.enhanced || window.imageData.original) {
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + (window.imageData.enhanced || window.imageData.original);
+            }
+
+            // Show HTML tabs
+            document.querySelector('#tab-rendered').parentElement.style.display = 'flex';
+            document.getElementById('html-rendered-container').style.display = 'block';
+
+            // Show raw HTML
+            document.getElementById('llm-html-output').textContent = data.html_raw || data.html;
+
+            // Render HTML in iframe
+            const iframe = document.getElementById('llm-html-rendered');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: 'Courier New', monospace; padding: 10px; margin: 0; background: #fff; }
+                    </style>
+                </head>
+                <body>${data.html}</body>
+                </html>
+            `);
+            iframeDoc.close();
+
+            // Auto-resize iframe
+            setTimeout(() => {
+                const height = iframeDoc.body.scrollHeight + 40;
+                iframe.style.height = Math.min(Math.max(height, 200), 600) + 'px';
+            }, 100);
+
+            showHtmlTab('rendered');
+
+            // Hide JSON section for vision-to-html (no structured data)
+            document.getElementById('llm-json-output').textContent = 'Vision to HTML generates visual HTML representation only.\nFor structured data extraction, use the Smart pipeline.';
+            document.getElementById('formatted-entities').innerHTML = `
+                <div style="background:rgba(0,212,255,0.1);padding:20px;border-radius:10px;text-align:center;">
+                    <h3 style="color:#00d4ff;margin:0 0 10px 0;">🆓 Free Model: ${data.model || 'qwen/qwen3-4b:free'}</h3>
+                    <p style="color:#888;margin:0;">This flow generates HTML representation of the document.<br>
+                    For structured data extraction with confidence scores, use the <strong>Smart</strong> pipeline.</p>
+                </div>
+            `;
+        }
+
+        // =====================================================================
+        // VISION CHAIN: Qwen VL (HTML) → Gemini (Extraction)
+        // =====================================================================
+
+        function runVisionChainAnalysis(imageSelect) {
+            let imageBase64 = window.imageData[imageSelect] || window.imageData.enhanced || window.imageData.original;
+
+            if (!imageBase64) {
+                hideLoading();
+                alert('No image available. Please upload an image first.');
+                return;
+            }
+
+            fetch('/vision/chain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageBase64, document_type: 'auto' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    alert('Error: ' + (data.error || 'Failed to process'));
+                    return;
+                }
+                displayVisionChainResults(data, imageBase64, imageSelect);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function runVisionChainEnhanced(imageSelect) {
+            if (!window.currentFile) {
+                hideLoading();
+                alert('No file available. Please upload an image first.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', window.currentFile);
+
+            fetch(`/vision/chain-enhanced?use_image=${imageSelect}&document_type=auto`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (!data.success) {
+                    alert('Error: ' + (data.error || 'Failed to process'));
+                    return;
+                }
+                displayVisionChainResults(data, null, data.image_used || imageSelect);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function displayVisionChainResults(data, imageSent, imageType) {
+            document.getElementById('llm-results').style.display = 'block';
+
+            const step1 = data.steps?.vision_to_html || {};
+            const step2 = data.steps?.extraction || {};
+
+            // Show timing with two-step breakdown
+            document.getElementById('llm-timing').innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:15px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;">
+                        <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                            <div class="stat-item" style="padding:10px 15px;">
+                                <div class="stat-value" style="color: #00d4ff;">${(data.total_time_ms / 1000).toFixed(2)}s</div>
+                                <div class="stat-label">Total Time</div>
+                            </div>
+                            <div class="stat-item" style="padding:10px 15px;">
+                                <div class="stat-value" style="color: #7b2cbf;">${((step1.time_ms || 0) / 1000).toFixed(2)}s</div>
+                                <div class="stat-label">Step 1 (Vision)</div>
+                            </div>
+                            <div class="stat-item" style="padding:10px 15px;">
+                                <div class="stat-value" style="color: #ffc800;">${((step2.time_ms || 0) / 1000).toFixed(2)}s</div>
+                                <div class="stat-label">Step 2 (Extract)</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="color:#888;font-size:0.8rem;margin-bottom:5px;">Image: ${imageType}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <div style="background:rgba(123,44,191,0.2);padding:8px 15px;border-radius:10px;font-size:0.85rem;">
+                            <strong>Step 1:</strong> 🔍 ${data.models_used?.vision || 'qwen/qwen3-vl-8b-instruct'} → HTML
+                        </div>
+                        <div style="font-size:1.2rem;">→</div>
+                        <div style="background:rgba(255,200,0,0.2);padding:8px 15px;border-radius:10px;font-size:0.85rem;">
+                            <strong>Step 2:</strong> 📝 ${data.models_used?.extraction || 'gemini-2.0-flash-001'} → Extraction
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Show image sent
+            if (imageSent) {
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + imageSent;
+            } else if (window.imageData.enhanced || window.imageData.original) {
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + (window.imageData.enhanced || window.imageData.original);
+            }
+
+            // Show HTML tabs
+            document.querySelector('#tab-rendered').parentElement.style.display = 'flex';
+            document.getElementById('html-rendered-container').style.display = 'block';
+
+            // Show raw HTML from step 1
+            document.getElementById('llm-html-output').textContent = data.html || '';
+
+            // Render HTML in iframe
+            const iframe = document.getElementById('llm-html-rendered');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: 'Courier New', monospace; padding: 10px; margin: 0; background: #fff; }
+                        .document { max-width: 400px; margin: 0 auto; }
+                        table { width: 100%; border-collapse: collapse; }
+                        td { padding: 4px 8px; border-bottom: 1px dotted #ddd; }
+                    </style>
+                </head>
+                <body>${data.html || ''}</body>
+                </html>
+            `);
+            iframeDoc.close();
+
+            setTimeout(() => {
+                const height = iframeDoc.body.scrollHeight + 40;
+                iframe.style.height = Math.min(Math.max(height, 200), 600) + 'px';
+            }, 100);
+
+            showHtmlTab('rendered');
+
+            // Show extracted JSON
+            document.getElementById('llm-json-output').textContent = JSON.stringify(data.extracted_data || {}, null, 2);
+
+            // Display formatted entities
+            displayFormattedEntities(data.extracted_data || {}, data.confidence || 0, data.warnings || []);
+        }
+
+        function runOriginalAnalysis(imageSelect) {
+            let imageBase64 = null;
+            let isAdvanced = false;
+            let advancedImages = null;
+
+            // Get the selected image
+            switch(imageSelect) {
+                case 'enhanced':
+                    imageBase64 = window.imageData.enhanced;
+                    break;
+                case 'cropped':
+                case 'extracted':
+                    imageBase64 = window.imageData.extracted || window.imageData.enhanced;
+                    break;
+                case 'binary':
+                    imageBase64 = window.imageData.binary;
+                    break;
+                case 'edges':
+                    imageBase64 = window.imageData.edges;
+                    break;
+                case 'contour_edges':
+                    imageBase64 = window.imageData.contour_edges;
+                    break;
+                case 'gradient':
+                    imageBase64 = window.imageData.gradient;
+                    break;
+                case 'original':
+                    imageBase64 = window.imageData.original;
+                    break;
+                case 'advanced':
+                    isAdvanced = true;
+                    advancedImages = {
+                        enhanced: window.imageData.enhanced,
+                        gradient: window.imageData.gradient
+                    };
+                    imageBase64 = window.imageData.enhanced;
+                    break;
+            }
+
+            if (!imageBase64 && !isAdvanced) {
+                hideLoading();
+                alert('No image data available. Please upload an image first.');
+                return;
+            }
+
+            if (isAdvanced && (!advancedImages.enhanced || !advancedImages.gradient)) {
+                hideLoading();
+                alert('No image data available for advanced analysis. Please upload an image first.');
+                return;
+            }
+
+            const endpoint = isAdvanced ? '/analyze-llm-advanced' : '/analyze-llm';
+
+            // Check crop quality to decide what images to send
+            // Build request body - cropping is disabled, send original + binary
+            let requestBody;
+            if (isAdvanced) {
+                requestBody = {
+                    enhanced_image: advancedImages.enhanced,
+                    gradient_image: advancedImages.gradient
+                };
+            } else {
+                // Send original image + binary for text clarity
+                // No cropping means enhanced is based on full image
+                requestBody = {
+                    image: window.imageData.original,
+                    binary_image: window.imageData.binary || null,
+                    enhanced_image: window.imageData.enhanced || null,
+                    crop_quality: 'none',
+                    crop_warning: false
+                };
+            }
+            const body = JSON.stringify(requestBody);
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: body
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                displayLlmResults(data);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function runSmartAnalysis(imageSelect) {
+            // Use enhanced image by default, or selected image
+            let imageBase64 = window.imageData.enhanced || window.imageData.original;
+
+            if (!imageBase64) {
+                hideLoading();
+                alert('No image available. Please upload an image first.');
+                return;
+            }
+
+            fetch('/smart/extract', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageBase64 })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.error || data.status === 'failed') {
+                    alert('Error: ' + (data.error || 'Extraction failed'));
+                    return;
+                }
+                displaySmartResults(data);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function runSmartEnhancedAnalysis(imageSelect) {
+            if (!window.currentFile) {
+                hideLoading();
+                alert('No file available. Please upload an image first.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', window.currentFile);
+
+            // Add image selection as query param
+            fetch(`/smart/extract-enhanced?use_image=${imageSelect}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.error || data.status === 'failed') {
+                    alert('Error: ' + (data.error || 'Extraction failed'));
+                    return;
+                }
+                displaySmartResults(data);
+            })
+            .catch(error => {
+                hideLoading();
+                alert('Error: ' + error.message);
+            });
+        }
+
+        function hideLoading() {
+            document.getElementById('llm-loading').style.display = 'none';
+            document.getElementById('llm-analyze-btn').disabled = false;
+        }
+
+        function displaySmartResults(data) {
+            document.getElementById('llm-results').style.display = 'block';
+
+            // Show timing info with model details
+            const timing = data.timing || {};
+            const classifyTime = (timing.classification_ms || 0) / 1000;
+            const extractTime = (timing.extraction_ms || 0) / 1000;
+            const totalTime = (timing.total_ms || 0) / 1000;
+            const preprocTime = (timing.preprocessing_ms || 0) / 1000;
+
+            // Get model info from config or use defaults
+            const classifyModel = data.models?.classify || 'google/gemini-2.0-flash-001';
+            const extractModel = data.models?.extract || 'google/gemini-2.0-flash-001';
+
+            let timingHtml = `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:15px;">
+                    <div class="stats-grid" style="flex:1;">
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #7b2cbf;">${classifyTime.toFixed(2)}s</div>
+                            <div class="stat-label">Classification</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #ffc800;">${extractTime.toFixed(2)}s</div>
+                            <div class="stat-label">Extraction</div>
+                        </div>
+            `;
+            if (preprocTime > 0) {
+                timingHtml += `
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #00d4ff;">${preprocTime.toFixed(2)}s</div>
+                            <div class="stat-label">Preprocessing</div>
+                        </div>
+                `;
+            }
+            timingHtml += `
+                        <div class="stat-item">
+                            <div class="stat-value" style="color: #00ff64;">${totalTime.toFixed(2)}s</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                    </div>
+                    <div style="text-align:right;min-width:200px;">
+                        <div style="font-size:0.75rem;color:#888;margin-bottom:5px;">Models Used:</div>
+                        <div style="background:rgba(123,44,191,0.2);padding:5px 10px;border-radius:5px;font-size:0.8rem;margin-bottom:5px;">
+                            📋 Classify: <strong>${classifyModel.split('/').pop()}</strong>
+                        </div>
+                        <div style="background:rgba(255,200,0,0.2);padding:5px 10px;border-radius:5px;font-size:0.8rem;">
+                            📝 Extract: <strong>${extractModel.split('/').pop()}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('llm-timing').innerHTML = timingHtml;
+
+            // Show image sent
+            if (window.imageData.enhanced || window.imageData.original) {
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + (window.imageData.enhanced || window.imageData.original);
+            }
+
+            // Hide HTML tabs (smart pipeline doesn't generate HTML)
+            document.getElementById('html-rendered-container').style.display = 'none';
+            document.getElementById('html-raw-container').style.display = 'none';
+            document.querySelector('#tab-rendered').parentElement.style.display = 'none';
+
+            // Show JSON output
+            const extraction = data.extraction || {};
+            document.getElementById('llm-json-output').textContent = JSON.stringify(extraction, null, 2);
+
+            // Display formatted entities
+            displaySmartFormattedEntities(data);
+        }
+
+        function displaySmartFormattedEntities(data) {
+            const classification = data.classification || {};
+            const extraction = data.extraction || {};
+            const preprocessing = data.preprocessing || null;
+
+            let html = '';
+
+            // Classification Result (prominent display)
+            const docType = classification.document_type || 'unknown';
+            const docConf = classification.confidence || 0;
+            const confColor = docConf >= 0.8 ? '#28a745' : docConf >= 0.6 ? '#ffc107' : '#dc3545';
+
+            // Document type icons/colors
+            const typeStyles = {
+                'thermal_receipt': { icon: '🧾', color: '#ff6b6b', label: 'Thermal Receipt' },
+                'a4_invoice': { icon: '📄', color: '#4dabf7', label: 'A4 Invoice' },
+                'handwritten': { icon: '✍️', color: '#fab005', label: 'Handwritten' },
+                'small_receipt': { icon: '🏷️', color: '#69db7c', label: 'Small Receipt' },
+                'utility_bill': { icon: '💡', color: '#ffd43b', label: 'Utility Bill' },
+                'bank_statement': { icon: '🏦', color: '#748ffc', label: 'Bank Statement' },
+                'other': { icon: '📋', color: '#868e96', label: 'Other Document' }
+            };
+
+            const typeStyle = typeStyles[docType] || typeStyles['other'];
+
+            html += `
+                <div style="background:linear-gradient(135deg, ${typeStyle.color}22, ${typeStyle.color}11);padding:20px;border-radius:15px;margin-bottom:20px;border-left:4px solid ${typeStyle.color};">
+                    <div style="display:flex;align-items:center;gap:15px;margin-bottom:15px;">
+                        <span style="font-size:2.5rem;">${typeStyle.icon}</span>
+                        <div>
+                            <h3 style="color:${typeStyle.color};margin:0;font-size:1.5rem;">${typeStyle.label}</h3>
+                            <div style="display:flex;align-items:center;gap:10px;margin-top:5px;">
+                                <span style="background:${confColor};color:#fff;padding:3px 10px;border-radius:10px;font-size:0.85rem;font-weight:bold;">
+                                    ${Math.round(docConf * 100)}% Confidence
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+            `;
+
+            // Classification reasoning
+            if (classification.reasoning) {
+                html += `<p style="margin:0;color:#aaa;font-size:0.9rem;font-style:italic;">"${classification.reasoning}"</p>`;
+            }
+
+            // Characteristics
+            const chars = classification.characteristics || {};
+            if (Object.keys(chars).length > 0) {
+                html += `<div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">`;
+                if (chars.paper_size) html += `<span style="background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:5px;font-size:0.8rem;">📏 ${chars.paper_size}</span>`;
+                if (chars.print_quality) html += `<span style="background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:5px;font-size:0.8rem;">🖨️ ${chars.print_quality}</span>`;
+                if (chars.has_letterhead) html += `<span style="background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:5px;font-size:0.8rem;">📨 Has letterhead</span>`;
+                if (chars.has_table) html += `<span style="background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:5px;font-size:0.8rem;">📊 Has table</span>`;
+                if (chars.is_faded) html += `<span style="background:rgba(255,200,0,0.2);padding:4px 10px;border-radius:5px;font-size:0.8rem;">⚠️ Faded</span>`;
+                if (chars.language_detected) html += `<span style="background:rgba(255,255,255,0.1);padding:4px 10px;border-radius:5px;font-size:0.8rem;">🌐 ${chars.language_detected}</span>`;
+                html += `</div>`;
+            }
+
+            html += `</div>`;
+
+            // Preprocessing info (if available)
+            if (preprocessing) {
+                html += `
+                    <div style="background:rgba(0,212,255,0.1);padding:12px;border-radius:10px;margin-bottom:20px;">
+                        <div style="display:flex;gap:15px;flex-wrap:wrap;font-size:0.85rem;">
+                            <span>📸 Image: ${preprocessing.image_used}</span>
+                            <span>${preprocessing.document_detected ? '✅' : '❌'} Doc detected</span>
+                            <span>✅ Enhanced</span>
+                            ${preprocessing.hand_detected ? '<span style="color:#ffc800;">✋ Hand detected</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Extracted data based on document type
+            html += '<h3 style="color: #7b2cbf; margin-bottom: 15px;">Extracted Information</h3>';
+            html += '<div class="stats-grid">';
+
+            // Helper to get field value with confidence
+            const getField = (fieldName) => {
+                const field = extraction[fieldName];
+                if (!field) return { value: null, confidence: null };
+                if (typeof field === 'object' && 'value' in field) {
+                    return { value: field.value, confidence: field.confidence };
+                }
+                return { value: field, confidence: null };
+            };
+
+            // Display based on document type
+            if (docType === 'thermal_receipt' || docType === 'small_receipt') {
+                // Receipt fields
+                const store = getField('store_name');
+                const date = getField('date');
+                const time = getField('time');
+                const total = getField('total');
+                const tax = getField('tax');
+                const payMethod = getField('payment_method');
+                const txnId = getField('transaction_id');
+
+                html += `
+                    <div class="stat-item" style="text-align:left;">
+                        <div style="color:#00d4ff;font-weight:bold;margin-bottom:5px;">Store ${getConfidenceBadge(store.confidence)}</div>
+                        <div>${store.value || 'N/A'}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${date.value || 'N/A'}</div>
+                        <div class="stat-label">Date ${getConfidenceBadge(date.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${time.value || 'N/A'}</div>
+                        <div class="stat-label">Time ${getConfidenceBadge(time.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#00ff64;font-size:1.5rem;">${total.value || 'N/A'}</div>
+                        <div class="stat-label">Total ${getConfidenceBadge(total.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#ffc800;">${tax.value || 'N/A'}</div>
+                        <div class="stat-label">Tax ${getConfidenceBadge(tax.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${payMethod.value || 'N/A'}</div>
+                        <div class="stat-label">Payment ${getConfidenceBadge(payMethod.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="font-size:0.9rem;">${txnId.value || 'N/A'}</div>
+                        <div class="stat-label">Receipt # ${getConfidenceBadge(txnId.confidence)}</div>
+                    </div>
+                `;
+
+            } else if (docType === 'a4_invoice') {
+                // Invoice fields
+                const supplier = getField('supplier');
+                const customer = getField('customer');
+                const invoiceNum = getField('invoice_number');
+                const date = getField('invoice_date');
+                const dueDate = getField('due_date');
+                const subtotal = getField('subtotal');
+                const total = getField('total');
+                const gstin = getField('supplier_gstin');
+
+                html += `
+                    <div class="stat-item" style="text-align:left;">
+                        <div style="color:#00d4ff;font-weight:bold;margin-bottom:5px;">Supplier ${getConfidenceBadge(supplier.confidence)}</div>
+                        <div>${supplier.value || 'N/A'}</div>
+                        ${gstin.value ? `<div style="color:#888;font-size:0.85rem;">GSTIN: ${gstin.value}</div>` : ''}
+                    </div>
+                    <div class="stat-item" style="text-align:left;">
+                        <div style="color:#00d4ff;font-weight:bold;margin-bottom:5px;">Customer ${getConfidenceBadge(customer.confidence)}</div>
+                        <div>${customer.value || 'N/A'}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${invoiceNum.value || 'N/A'}</div>
+                        <div class="stat-label">Invoice # ${getConfidenceBadge(invoiceNum.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${date.value || 'N/A'}</div>
+                        <div class="stat-label">Date ${getConfidenceBadge(date.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${dueDate.value || 'N/A'}</div>
+                        <div class="stat-label">Due Date ${getConfidenceBadge(dueDate.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#888;">${subtotal.value || 'N/A'}</div>
+                        <div class="stat-label">Subtotal ${getConfidenceBadge(subtotal.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#00ff64;font-size:1.5rem;">${total.value || 'N/A'}</div>
+                        <div class="stat-label">Total ${getConfidenceBadge(total.confidence)}</div>
+                    </div>
+                `;
+
+            } else if (docType === 'utility_bill') {
+                // Utility bill fields
+                const provider = getField('provider');
+                const utilityType = getField('utility_type');
+                const accountNum = getField('account_number');
+                const billDate = getField('bill_date');
+                const dueDate = getField('due_date');
+                const unitsConsumed = getField('units_consumed');
+                const totalDue = getField('total_due');
+
+                html += `
+                    <div class="stat-item" style="text-align:left;">
+                        <div style="color:#00d4ff;font-weight:bold;margin-bottom:5px;">Provider ${getConfidenceBadge(provider.confidence)}</div>
+                        <div>${provider.value || 'N/A'}</div>
+                        <div style="color:#888;font-size:0.85rem;">${utilityType.value || ''}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="font-size:0.9rem;">${accountNum.value || 'N/A'}</div>
+                        <div class="stat-label">Account # ${getConfidenceBadge(accountNum.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${billDate.value || 'N/A'}</div>
+                        <div class="stat-label">Bill Date ${getConfidenceBadge(billDate.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${dueDate.value || 'N/A'}</div>
+                        <div class="stat-label">Due Date ${getConfidenceBadge(dueDate.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${unitsConsumed.value || 'N/A'}</div>
+                        <div class="stat-label">Units ${getConfidenceBadge(unitsConsumed.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#00ff64;font-size:1.5rem;">${totalDue.value || 'N/A'}</div>
+                        <div class="stat-label">Total Due ${getConfidenceBadge(totalDue.confidence)}</div>
+                    </div>
+                `;
+
+            } else if (docType === 'handwritten') {
+                // Handwritten fields
+                const vendor = getField('vendor_name');
+                const date = getField('date');
+                const total = getField('total');
+                const customer = getField('customer_name');
+                const legibility = extraction.legibility || 'unknown';
+                const notes = getField('notes');
+
+                const legibilityColor = legibility === 'good' ? '#28a745' : legibility === 'fair' ? '#ffc107' : '#dc3545';
+
+                html += `
+                    <div class="stat-item" style="text-align:left;">
+                        <div style="color:#00d4ff;font-weight:bold;margin-bottom:5px;">Vendor ${getConfidenceBadge(vendor.confidence)}</div>
+                        <div>${vendor.value || 'N/A'}</div>
+                    </div>
+                    <div class="stat-item" style="text-align:left;">
+                        <div style="color:#00d4ff;font-weight:bold;margin-bottom:5px;">Customer ${getConfidenceBadge(customer.confidence)}</div>
+                        <div>${customer.value || 'N/A'}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${date.value || 'N/A'}</div>
+                        <div class="stat-label">Date ${getConfidenceBadge(date.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color:#00ff64;font-size:1.5rem;">${total.value || 'N/A'}</div>
+                        <div class="stat-label">Total ${getConfidenceBadge(total.confidence)}</div>
+                    </div>
+                    <div class="stat-item">
+                        <span style="background:${legibilityColor};color:#fff;padding:5px 15px;border-radius:5px;font-weight:bold;">${legibility.toUpperCase()}</span>
+                        <div class="stat-label" style="margin-top:5px;">Legibility</div>
+                    </div>
+                `;
+                if (notes.value) {
+                    html += `
+                        <div class="stat-item" style="grid-column:span 2;text-align:left;">
+                            <div style="color:#888;font-weight:bold;margin-bottom:5px;">Notes</div>
+                            <div style="font-size:0.9rem;">${notes.value}</div>
+                        </div>
+                    `;
+                }
+
+            } else {
+                // Generic/Other - show all extracted fields
+                for (const [key, value] of Object.entries(extraction)) {
+                    if (key.startsWith('_')) continue; // Skip metadata
+                    const field = getField(key);
+                    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    html += `
+                        <div class="stat-item">
+                            <div class="stat-value" style="font-size:0.95rem;">${field.value || 'N/A'}</div>
+                            <div class="stat-label">${displayKey} ${getConfidenceBadge(field.confidence)}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            html += '</div>';
+
+            // Show items list if present
+            const items = extraction.items || [];
+            if (items.length > 0) {
+                html += `
+                    <h3 style="color:#7b2cbf;margin:20px 0 15px 0;">Line Items (${items.length})</h3>
+                    <div style="background:#0a0a15;border-radius:10px;padding:15px;overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;color:#fff;font-size:0.9rem;">
+                            <thead>
+                                <tr style="border-bottom:1px solid #333;">
+                                    <th style="text-align:left;padding:8px;color:#00d4ff;">Item</th>
+                                    <th style="text-align:center;padding:8px;color:#00d4ff;">Qty</th>
+                                    <th style="text-align:right;padding:8px;color:#00d4ff;">Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map(item => `
+                                    <tr style="border-bottom:1px solid #222;">
+                                        <td style="padding:8px;">${item.name || item.description || 'N/A'}</td>
+                                        <td style="text-align:center;padding:8px;">${item.quantity || 1}</td>
+                                        <td style="text-align:right;padding:8px;color:#00ff64;">${item.price || item.amount || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            document.getElementById('formatted-entities').innerHTML = html;
+        }
+
+        function showHtmlTab(tab) {
+            const renderedContainer = document.getElementById('html-rendered-container');
+            const rawContainer = document.getElementById('html-raw-container');
+            const tabRendered = document.getElementById('tab-rendered');
+            const tabRaw = document.getElementById('tab-raw');
+
+            if (tab === 'rendered') {
+                renderedContainer.style.display = 'block';
+                rawContainer.style.display = 'none';
+                tabRendered.style.background = 'rgba(0,212,255,0.2)';
+                tabRendered.style.color = '#00d4ff';
+                tabRaw.style.background = 'rgba(255,255,255,0.05)';
+                tabRaw.style.color = '#888';
+            } else {
+                renderedContainer.style.display = 'none';
+                rawContainer.style.display = 'block';
+                tabRaw.style.background = 'rgba(0,212,255,0.2)';
+                tabRaw.style.color = '#00d4ff';
+                tabRendered.style.background = 'rgba(255,255,255,0.05)';
+                tabRendered.style.color = '#888';
+            }
+        }
+
+        function displayLlmResults(data) {
+            document.getElementById('llm-results').style.display = 'block';
+
+            // Show timing info with mode indicator
+            const timing = data.timing || {};
+            const mode = data.html_conversion?.mode || 'single_image';
+            const numImages = data.num_images || 1;
+            const modeLabels = {
+                'triple_image': `Triple Image (${numImages} images)`,
+                'dual_image': `Dual Image (${numImages} images)`,
+                'single_image': 'Single Image'
+            };
+            const modeLabel = modeLabels[mode] || 'Single Image';
+            const modeColors = {
+                'triple_image': '#22c55e',
+                'dual_image': '#a855f7',
+                'single_image': '#6b7280'
+            };
+            const modeColor = modeColors[mode] || '#6b7280';
+
+            // Crop quality info
+            const cropQuality = data.crop_quality || 'unknown';
+            const cropQualityColor = cropQuality === 'good' ? '#22c55e' :
+                                     cropQuality === 'fair' ? '#ffc107' :
+                                     cropQuality === 'poor' ? '#dc3545' : '#6b7280';
+
+            document.getElementById('llm-timing').innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #00d4ff;">${timing.html_conversion_seconds || 0}s</div>
+                        <div class="stat-label">HTML Conversion</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #ffc800;">${timing.entity_extraction_seconds || 0}s</div>
+                        <div class="stat-label">Entity Extraction</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: #00ff64;">${timing.total_seconds || 0}s</div>
+                        <div class="stat-label">Total AI Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: ${modeColor}; font-size: 0.85em;">${modeLabel}</div>
+                        <div class="stat-label">Vision Mode</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" style="color: ${cropQualityColor}; font-size: 0.85em;">${cropQuality.toUpperCase()}</div>
+                        <div class="stat-label">Crop Quality</div>
+                    </div>
+                </div>
+            `;
+
+            // Show crop warning if present
+            const cropWarning = window.cropInfo?.crop_warning;
+            const cropWarningEl = document.getElementById('llm-crop-warning');
+            if (data.has_crop_warning || cropWarning) {
+                cropWarningEl.style.display = 'block';
+                document.getElementById('llm-crop-warning-text').textContent = cropWarning || 'Possible over-cropping detected. Using original uncropped image.';
+            } else {
+                cropWarningEl.style.display = 'none';
+            }
+
+            // Hide all image containers first
+            document.getElementById('llm-triple-images-container').style.display = 'none';
+            document.getElementById('llm-dual-images-container').style.display = 'none';
+            document.getElementById('llm-single-image-container').style.display = 'none';
+
+            // Get images from response or fallback to window.imageData
+            const images = data.images_sent || {};
+            const originalImg = images.original || window.imageData.original;
+            const binaryImg = images.binary || window.imageData.binary;
+            const enhancedImg = images.enhanced || window.imageData.enhanced;
+
+            // Show appropriate container based on mode
+            if (mode === 'triple_image' && originalImg && binaryImg && enhancedImg) {
+                // Triple image mode
+                document.getElementById('llm-triple-images-container').style.display = 'grid';
+                document.getElementById('llm-image-original-3').src = 'data:image/png;base64,' + originalImg;
+                document.getElementById('llm-image-binary-3').src = 'data:image/png;base64,' + binaryImg;
+                document.getElementById('llm-image-enhanced-3').src = 'data:image/png;base64,' + enhancedImg;
+            } else if (mode === 'dual_image' && originalImg && binaryImg) {
+                // Dual image mode
+                document.getElementById('llm-dual-images-container').style.display = 'grid';
+                document.getElementById('llm-image-original-2').src = 'data:image/png;base64,' + originalImg;
+                document.getElementById('llm-image-binary-2').src = 'data:image/png;base64,' + binaryImg;
+            } else {
+                // Single image mode fallback
+                document.getElementById('llm-single-image-container').style.display = 'block';
+                document.getElementById('llm-image-sent').src = 'data:image/png;base64,' + (originalImg || images.original);
+            }
+
+            // Show HTML output
+            const htmlContent = data.html_conversion?.html || 'No HTML generated';
+            document.getElementById('llm-html-output').textContent = htmlContent;
+
+            // Render HTML in iframe
+            const iframe = document.getElementById('llm-html-rendered');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {
+                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                            padding: 20px;
+                            margin: 0;
+                            color: #333;
+                            line-height: 1.6;
+                        }
+                        table {
+                            border-collapse: collapse;
+                            width: 100%;
+                            margin: 10px 0;
+                        }
+                        th, td {
+                            border: 1px solid #ddd;
+                            padding: 8px;
+                            text-align: left;
+                        }
+                        th {
+                            background-color: #f5f5f5;
+                        }
+                        h1, h2, h3 {
+                            color: #333;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>${htmlContent}</body>
+                </html>
+            `);
+            iframeDoc.close();
+
+            // Auto-resize iframe to fit content
+            setTimeout(() => {
+                const height = iframeDoc.body.scrollHeight + 40;
+                iframe.style.height = Math.min(Math.max(height, 200), 600) + 'px';
+            }, 100);
+
+            // Reset to rendered tab
+            showHtmlTab('rendered');
+
+            // Show JSON output
+            const extraction = data.entity_extraction;
+            if (extraction?.extracted_data) {
+                document.getElementById('llm-json-output').textContent =
+                    JSON.stringify(extraction.extracted_data, null, 2);
+
+                // Display formatted entities
+                displayFormattedEntities(extraction.extracted_data);
+            } else if (extraction?.raw_response) {
+                document.getElementById('llm-json-output').textContent = extraction.raw_response;
+                document.getElementById('formatted-entities').innerHTML =
+                    '<p style="color: #ffc800;">Could not parse structured data. See raw response above.</p>';
+            } else {
+                document.getElementById('llm-json-output').textContent = 'No extraction data available';
+            }
+        }
+
+        // Helper function to get confidence badge
+        function getConfidenceBadge(confidence, isInferred = false) {
+            if (confidence === null || confidence === undefined) return '';
+            const conf = parseFloat(confidence);
+            let color, text;
+            if (conf >= 0.8) {
+                color = '#28a745'; text = 'High';
+            } else if (conf >= 0.6) {
+                color = '#ffc107'; text = 'Medium';
+            } else if (conf >= 0.4) {
+                color = '#fd7e14'; text = 'Low';
+            } else {
+                color = '#dc3545'; text = 'Very Low';
+            }
+            const inferredBadge = isInferred ? '<span style="background:#6f42c1;color:#fff;padding:2px 6px;border-radius:3px;font-size:0.7rem;margin-left:5px;">INFERRED</span>' : '';
+            return `<span style="background:${color};color:#fff;padding:2px 8px;border-radius:3px;font-size:0.75rem;">${Math.round(conf * 100)}%</span>${inferredBadge}`;
+        }
+
+        // Helper to get field value (supports both old and new format)
+        function getFieldValue(field) {
+            if (field === null || field === undefined) return { value: null, confidence: null, isInferred: false };
+            if (typeof field === 'object' && 'value' in field) {
+                return { value: field.value, confidence: field.confidence, isInferred: field.is_inferred || false };
+            }
+            return { value: field, confidence: null, isInferred: false };
+        }
+
+        function displayFormattedEntities(data) {
+            let html = '<h3 style="color: #7b2cbf; margin-bottom: 15px;">📋 Extracted Information</h3>';
+
+            // Supplier Section
+            if (data.supplier || data.merchant) {
+                const s = data.supplier || data.merchant || {};
+                html += `
+                    <div style="background: rgba(0,212,255,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                        <h4 style="color: #00d4ff; margin: 0 0 10px 0;">🏢 Supplier/Merchant</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item" style="text-align: left;">
+                                <div class="stat-value" style="font-size: 1.1rem;">${s.name || 'N/A'}</div>
+                                <div class="stat-label">Name</div>
+                            </div>
+                            ${s.address ? `<div class="stat-item" style="text-align: left;"><div style="color: #888; font-size: 0.9rem;">${s.address}</div><div class="stat-label">Address</div></div>` : ''}
+                            ${s.phone ? `<div class="stat-item"><div class="stat-value">${s.phone}</div><div class="stat-label">Phone</div></div>` : ''}
+                            ${s.vat_number ? `<div class="stat-item"><div class="stat-value">${s.vat_number}</div><div class="stat-label">VAT Number</div></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Customer Section
+            if (data.customer) {
+                const c = data.customer || {};
+                html += `
+                    <div style="background: rgba(123,44,191,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                        <h4 style="color: #7b2cbf; margin: 0 0 10px 0;">👤 Customer</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item" style="text-align: left;">
+                                <div class="stat-value" style="font-size: 1.1rem;">${c.name || 'N/A'}</div>
+                                <div class="stat-label">Name</div>
+                            </div>
+                            ${c.address ? `<div class="stat-item" style="text-align: left;"><div style="color: #888; font-size: 0.9rem;">${c.address}</div><div class="stat-label">Address</div></div>` : ''}
+                            ${c.account ? `<div class="stat-item"><div class="stat-value">${c.account}</div><div class="stat-label">Account</div></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Document Info
+            const doc = data.document || data.transaction || {};
+            html += `
+                <div class="stats-grid" style="margin-bottom: 15px;">
+                    ${doc.number || doc.receipt_number ? `<div class="stat-item"><div class="stat-value">${doc.number || doc.receipt_number}</div><div class="stat-label">Document #</div></div>` : ''}
+                    ${doc.date ? `<div class="stat-item"><div class="stat-value">${doc.date}</div><div class="stat-label">Date</div></div>` : ''}
+                    ${doc.time ? `<div class="stat-item"><div class="stat-value">${doc.time}</div><div class="stat-label">Time</div></div>` : ''}
+                    ${doc.order_number ? `<div class="stat-item"><div class="stat-value">${doc.order_number}</div><div class="stat-label">Order #</div></div>` : ''}
+                </div>
+            `;
+
+            // Amounts
+            const amounts = data.amounts || {};
+            html += `
+                <div style="background: rgba(0,255,100,0.1); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                    <h4 style="color: #00ff64; margin: 0 0 10px 0;">💰 Amounts</h4>
+                    <div class="stats-grid">
+                        ${amounts.subtotal || amounts.goods_total ? `<div class="stat-item"><div class="stat-value" style="color: #888;">${amounts.subtotal || amounts.goods_total}</div><div class="stat-label">Subtotal</div></div>` : ''}
+                        ${amounts.tax || amounts.tax_amount || amounts.vat_amount ? `<div class="stat-item"><div class="stat-value" style="color: #ffc800;">${amounts.tax || amounts.tax_amount || amounts.vat_amount}</div><div class="stat-label">Tax/VAT</div></div>` : ''}
+                        ${amounts.total ? `<div class="stat-item"><div class="stat-value" style="color: #00ff64; font-size: 1.5rem;">${amounts.total}</div><div class="stat-label">Total</div></div>` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Payment
+            const payment = data.payment || {};
+            if (payment.method || payment.card_type || payment.amount) {
+                html += `
+                    <div class="stats-grid" style="margin-bottom: 15px;">
+                        ${payment.method ? `<div class="stat-item"><div class="stat-value">${payment.method}</div><div class="stat-label">Payment Method</div></div>` : ''}
+                        ${payment.card_type ? `<div class="stat-item"><div class="stat-value">${payment.card_type}</div><div class="stat-label">Card Type</div></div>` : ''}
+                        ${payment.currency ? `<div class="stat-item"><div class="stat-value">${payment.currency}</div><div class="stat-label">Currency</div></div>` : ''}
+                        ${payment.status ? `<div class="stat-item"><div class="stat-value">${payment.status}</div><div class="stat-label">Status</div></div>` : ''}
+                    </div>
+                `;
+            }
+
+            // Line Items
+            const items = data.items || [];
+            if (items.length > 0) {
+                html += `<h4 style="color: #7b2cbf; margin: 20px 0 10px;">📦 Line Items (${items.length})</h4>`;
+                html += '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">';
+                html += '<tr style="background: rgba(0,212,255,0.2);"><th style="padding: 10px; text-align: left;">Description</th><th style="padding: 10px;">Qty</th><th style="padding: 10px;">Price</th><th style="padding: 10px;">Total</th></tr>';
+
+                items.forEach(item => {
+                    html += `<tr style="border-bottom: 1px solid #333;">
+                        <td style="padding: 10px;">${item.description || item.name || ''}</td>
+                        <td style="padding: 10px; text-align: center;">${item.quantity || ''}</td>
+                        <td style="padding: 10px; text-align: right;">${item.unit_price || item.price || ''}</td>
+                        <td style="padding: 10px; text-align: right;">${item.total || ''}</td>
+                    </tr>`;
+                });
+
+                html += '</table></div>';
+            }
+
+            document.getElementById('formatted-entities').innerHTML = html;
+        }
+
+        function resetAnalysis() {
+            uploadSection.style.display = 'block';
+            loading.style.display = 'none';
+            results.style.display = 'none';
+            fileInput.value = '';
+            window.croppedImageData = null;
+            window.imageData = {};
+            document.getElementById('llm-results').style.display = 'none';
+        }
+
+        // Check API key on load
+        checkApiKey();
+    </script>
+</body>
+</html>

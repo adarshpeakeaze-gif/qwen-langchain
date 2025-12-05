@@ -1,0 +1,49 @@
+# Virtual environment
+.venv/
+venv/
+
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Uploads (will be mounted as volume)
+uploads/
+
+# Environment files with secrets
+
+
+# Test files
+test.html
+*.test.py
+tests/
+
+# Documentation
+*.md
+LICENSE
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
