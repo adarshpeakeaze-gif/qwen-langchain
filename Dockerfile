@@ -9,13 +9,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app files (modular structure)
 COPY app.py .
+COPY config.py .
 COPY templates/ templates/
 COPY prompts/ prompts/
 COPY extraction/ extraction/
+
+# Copy .env file (contains API keys - for dev only, use env vars in production)
 COPY .env .
 
-ENV FLASK_DEBUG=true
-ENV FLASK_PORT=5051
+# Default environment variables
+ENV HOST=0.0.0.0
+ENV PORT=5051
+ENV DEBUG=false
 
 EXPOSE 5051
 
