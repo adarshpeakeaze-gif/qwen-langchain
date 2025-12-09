@@ -3,10 +3,6 @@
 		{
 			"name": "imagePreprocessor",
 			"path": "."
-		},
-		{
-			"name": "datalabs",
-			"path": "../../Downloads/invoice_ai_test/datalabs"
 		}
 	],
 	"settings": {}
