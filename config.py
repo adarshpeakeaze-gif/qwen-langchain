@@ -122,10 +122,10 @@ class Config:
     # ==========================================================================
     # Image Optimization for Vision API
     # ==========================================================================
-    # Max dimension for resizing (1568 is optimal for most vision models)
-    IMAGE_MAX_DIMENSION: int = get_int("IMAGE_MAX_DIMENSION", 1568)
-    # JPEG quality for compression (1-100, higher = better quality, larger size)
-    IMAGE_QUALITY: int = get_int("IMAGE_QUALITY", 85)
+    # Max dimension for resizing (2048 preserves more detail)
+    IMAGE_MAX_DIMENSION: int = get_int("IMAGE_MAX_DIMENSION", 2048)
+    # JPEG quality for compression (1-100, 92 = high quality with reasonable size)
+    IMAGE_QUALITY: int = get_int("IMAGE_QUALITY", 92)
     # Enable/disable image optimization
     IMAGE_OPTIMIZATION_ENABLED: bool = get_bool("IMAGE_OPTIMIZATION_ENABLED", True)
 

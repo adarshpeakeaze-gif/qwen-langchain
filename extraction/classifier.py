@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional
 
 import requests
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
 from config import config
@@ -325,10 +325,11 @@ def create_classifier_agent(api_key: str = None):
         }
     )
 
+    # Pass system prompt directly (can be str or SystemMessage)
     agent = create_react_agent(
         llm,
         EXTRACTION_TOOLS,
-        prompt=CLASSIFIER_SYSTEM_PROMPT
+        prompt=SystemMessage(content=CLASSIFIER_SYSTEM_PROMPT)
     )
 
     return agent
