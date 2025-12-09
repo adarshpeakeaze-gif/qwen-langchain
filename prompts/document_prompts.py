@@ -40,11 +40,12 @@ Your description should include:
    - This helps the person know what information might be missing
 
 IMPORTANT - Multiple Documents:
-Only mention multiple or overlapping documents if you are VERY CONFIDENT there are clearly two or more separate documents visible. Do NOT report overlapping documents just because of:
+Only mention multiple or overlapping documents if you are VERY CONFIDENT there are clearly two or more separate documents visible (for example, you can see distinct edges of different papers, or clearly different document types/content). Do NOT report overlapping documents just because of:
 - Shadows on the document
 - Document edges or borders
 - Background surfaces visible around the document
 - Slight creases or folds in a single document
+If there truly are multiple documents, briefly mention it and describe each separately.
 
 Use phrases like:
 - "I can clearly see that..." (for definite information)
@@ -62,8 +63,6 @@ Do NOT:
 
 Keep it conversational and helpful, but always honest about what you can and cannot see clearly.
 """
-
-
 # =============================================================================
 # Document Classifier System Prompt (Step 2: GPT-4o-mini with Tools)
 # =============================================================================
